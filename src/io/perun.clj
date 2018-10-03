@@ -1136,25 +1136,48 @@
         options (assoc options* :grouper (page-grouper-fn options*))]
     (assortment-task options)))
 
+(defn validate-paths
+  "Filter out invalid entries from paths using supplied validators"
+  [validators paths]
+  (let [validate-entry (fn [[valid invalid] entry]
+                         (let [report (map #(if (%1 %2 entry) (list entry) ()) validators invalid)]
+                           (if (seq (filter seq report))
+                             [valid (map concat invalid report)]
+                             [(conj valid entry) invalid])))]
+    (reduce
+     (fn [[valid0 invalid-acc0] [path content]]
+       (let [entries (:entries content)
+             [valid-entries invalid-acc] (reduce validate-entry
+                                                 [nil invalid-acc0]
+                                                 entries)
+             valid (if valid-entries {path (assoc content :entries valid-entries)})]
+         [(merge valid0 valid) invalid-acc]))
+     [nil (repeat nil)] paths)))
+
+(validate-paths
+ [(fn [es e] (:id e)) (fn [es e] (:uuid e))]
+ {:1 {:entries '({} {:uuid 2})}
+  :2 {:entries '({:id 1 :uuid 2})}})
+
 (defn atom-paths
   [fileset options]
   (let [{:keys [site-title base-url author]} (merge (pm/get-global-meta fileset)
                                                     options)
         paths (grouped-paths "atom-feed" fileset options)
         missing-title (not (seq site-title))
-        entries (mapcat :entries (vals paths))
-        dupe-uuids (->> (keep :uuid entries)
-                        frequencies
-                        (filter (fn [[_ num]] (> num 1)))
-                        (map first)
-                        seq)
-        no-uuid (seq (remove :uuid entries))
-        no-author (when-not author (seq (remove :author entries)))]
+        validators [#(some
+                      (partial = (:uuid %2))
+                      (map :uuid %1))
+                    #(not (contains? %2 :uuid))
+                    #(or author (not (contains? %2 :author)))]
+        [valid-paths invalid-entries] (validate-paths validators paths)
+        [dupes no-uuid no-author] (into [] (map seq invalid-entries))
+        dupe-uuids (map :uuid dupes)]
     (perun/assert-base-url base-url)
     (when missing-title
       (u/fail "Atom XML requires non-empty site-title\n"))
     (doseq [uuid dupe-uuids]
-      (let [dupe-paths (map :path (filter #(= uuid (:uuid %)) entries))]
+      (let [dupe-paths (map :path (dupes))]
         (u/fail
          (format (str "The same uuid is assigned to these files: %s. You may "
                       "find these fresh uuids handy: %s\n")
@@ -1173,8 +1196,8 @@
        (format (str "Atom XML requires that each post has an author name. "
                     "%s is missing one\n")
                path)))
-    (when-not (or missing-title dupe-uuids no-uuid no-author)
-      paths)))
+    (when-not (or missing-title no-author)
+      valid-paths)))
 
 (def ^:private ^:deps atom-deps
   '[[org.clojure/tools.namespace "0.3.0-alpha4"]
