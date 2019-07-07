@@ -57,10 +57,10 @@
                 [:atom:id base-url]
 
                 (when global-author
-                  [:author
-                   [:name global-author]
+                  [:atom:author
+                   [:atom:name global-author]
                    (when global-author-email
-                     [:email global-author-email])])
+                     [:atom:email global-author-email])])
 
                 (for [{:keys [uuid title author permalink
                               author-email category tags content] :as post} entries
@@ -68,17 +68,17 @@
                             author-email (or author-email global-author-email)
                             canonical-url (perun/permalink->canonical-url permalink base-url)]]
                   [:atom:entry
-                   [:id canonical-url]
-                   [:title title]
+                   [:atom:id canonical-url]
+                   [:atom:title title]
                    (when canonical-url
-                     [:link {:href canonical-url :type "text/html" :title title :rel "alternate"}])
-                   [:published (iso-datetime (published post))]
-                   [:updated (iso-datetime (updated post))]
-                   [:content {:type "html" :xml:base canonical-url} (str content)]
-                   [:author
-                    [:name author]
-                    (when author-email [:email author-email])]
+                     [:atom:link {:href canonical-url :type "text/html" :title title :rel "alternate"}])
+                   [:atom:published (iso-datetime (published post))]
+                   [:atom:updated (iso-datetime (updated post))]
+                   [:atom:content {:type "html" :xml:base canonical-url} (str content)]
+                   [:atom:author
+                    [:atom:name author]
+                    (when author-email [:atom:email author-email])]
                    (for [tag tags]
                    ;; FIXME: post-image media:thumbnail
-                     [:category {:term tag}])])]))]
+                     [:atom:category {:term tag}])])]))]
     (assoc entry :rendered atom)))
