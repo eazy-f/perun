@@ -30,7 +30,8 @@
 
 (defn generate-atom [{:keys [entry entries meta]}]
   (let [{:keys [site-title description base-url
-                canonical-url io.perun/version] :as options} (merge meta entry)
+                permalink io.perun/version] :as options} (merge meta entry)
+        canonical-url (perun/permalink->canonical-url permalink base-url)
         {global-author :author global-author-email :author-email} meta
         navs (nav-hrefs options)
         atom (xml/emit-str
@@ -61,12 +62,13 @@
                    (when global-author-email
                      [:email global-author-email])])
 
-                (for [{:keys [uuid canonical-url title author
+                (for [{:keys [uuid title author permalink
                               author-email category tags content] :as post} entries
                       :let [author (or author global-author)
-                            author-email (or author-email global-author-email)]]
+                            author-email (or author-email global-author-email)
+                            canonical-url (perun/permalink->canonical-url permalink base-url)]]
                   [:entry
-                   [:id (str "urn:uuid:" uuid)]
+                   [:id canonical-url]
                    [:title title]
                    (when canonical-url
                      [:link {:href canonical-url :type "text/html" :title title :rel "alternate"}])
@@ -79,5 +81,4 @@
                    (for [tag tags]
                    ;; FIXME: post-image media:thumbnail
                      [:category {:term tag}])])]))]
-
     (assoc entry :rendered atom)))
