@@ -36,25 +36,25 @@
         navs (nav-hrefs options)
         atom (xml/emit-str
               (xml/sexp-as-element
-               [:feed {:xmlns "http://www.w3.org/2005/Atom"}
-                [:title site-title]
+               [:atom:feed {:xmlns:atom "http://www.w3.org/2005/Atom"}
+                [:atom:title site-title]
                 (when (seq description)
-                  [:subtitle description])
-                [:generator {:uri "https://perun.io/" :version version} "Perun"]
-                [:link {:href base-url :type "text/html"}]
-                [:link {:href canonical-url :rel "self"}]
-                [:link {:href (:first navs) :rel "first"}]
-                [:link {:href (:last navs) :rel "last"}]
+                  [:atom:subtitle description])
+                [:atom:generator {:uri "https://perun.io/" :version version} "Perun"]
+                [:atom:link {:href base-url :type "text/html"}]
+                [:atom:link {:href canonical-url :rel "self"}]
+                [:atom:link {:href (:first navs) :rel "first"}]
+                [:atom:link {:href (:last navs) :rel "last"}]
                 (when-let [next (:next navs)]
-                  [:link {:href next :rel "next"}])
+                  [:atom:link {:href next :rel "next"}])
                 (when-let [prev (:prev navs)]
-                  [:link {:href prev :rel "previous"}])
-                [:updated (->> entries
+                  [:atom:link {:href prev :rel "previous"}])
+                [:atom:updated (->> entries
                                (map (comp iso-datetime updated first))
                                sort
                                reverse
                                first)]
-                [:id base-url]
+                [:atom:id base-url]
 
                 (when global-author
                   [:author
@@ -67,7 +67,7 @@
                       :let [author (or author global-author)
                             author-email (or author-email global-author-email)
                             canonical-url (perun/permalink->canonical-url permalink base-url)]]
-                  [:entry
+                  [:atom:entry
                    [:id canonical-url]
                    [:title title]
                    (when canonical-url
